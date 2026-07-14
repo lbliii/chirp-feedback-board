@@ -45,6 +45,7 @@ async def test_full_page_health_database_readiness_and_asset(tmp_path: Path) -> 
     assert page.status == health.status == ready.status == css.status == 200
     assert "Turn feedback into" in page.text
     assert "Add a calm dark mode" in page.text
+    assert 'href="https://lbliii.github.io/chirp/"' in page.text
     assert "--lime:" in css.text
 
 
