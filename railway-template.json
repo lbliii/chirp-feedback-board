@@ -1,0 +1,128 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lbliii/chirp-railway-catalog/main/schema/template-manifest.schema.json",
+  "schema_version": 1,
+  "template": {
+    "slug": "chirp-feedback-board",
+    "title": "Feedback & Roadmap Board — Chirp + PostgreSQL",
+    "repository": "https://github.com/lbliii/chirp-feedback-board",
+    "ref": "v0.1.0",
+    "python": "3.14",
+    "chirp_spec": ">=0.10,<0.11",
+    "chirp_locked": "0.10.0",
+    "start_command": "python app.py",
+    "health_path": "/ready",
+    "owner": "lbliii",
+    "support_url": "https://github.com/lbliii/chirp-feedback-board/issues",
+    "status": "draft",
+    "public_url": null,
+    "demo_url": null,
+    "last_successful_smoke": null,
+    "services": ["web", "postgres"],
+    "variables": [
+      {"name": "PORT", "source": "railway", "secret": false},
+      {"name": "DATABASE_URL", "source": "railway", "secret": true},
+      {"name": "CHIRP_ENV", "source": "template", "secret": false},
+      {"name": "CHIRP_SECRET_KEY", "source": "template", "secret": true},
+      {"name": "CHIRP_ADMIN_TOKEN", "source": "template", "secret": true},
+      {"name": "CHIRP_SKIP_MIGRATIONS", "source": "template", "secret": false}
+    ]
+  },
+  "required_categories": [
+    "asset",
+    "form",
+    "full-page",
+    "health",
+    "htmx",
+    "oob",
+    "readiness"
+  ],
+  "required_operations": [
+    "deployment",
+    "ejection",
+    "restart",
+    "rollback",
+    "shutdown",
+    "update"
+  ],
+  "checks": [
+    {
+      "id": "full-page",
+      "category": "full-page",
+      "path": "/",
+      "contains": ["Signal Board", "Turn feedback into", "Add a calm dark mode"],
+      "extract": {"csrf": "name=\"_csrf_token\" value=\"([^\"]+)\""}
+    },
+    {
+      "id": "malformed-form",
+      "category": "form",
+      "method": "POST",
+      "path": "/suggestions",
+      "request_headers": {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "HX-Request": "true",
+        "HX-Target": "board"
+      },
+      "body": "title=&description=short&_csrf_token={{csrf}}",
+      "contains": ["title of at least 3 characters", "hx-swap-oob"]
+    },
+    {
+      "id": "no-js-add",
+      "category": "form",
+      "method": "POST",
+      "path": "/suggestions",
+      "request_headers": {"Content-Type": "application/x-www-form-urlencoded"},
+      "body": "title=Publish+a+weekly+digest&description=Summarize+the+ideas+that+moved+during+the+last+seven+days.&_csrf_token={{csrf}}",
+      "contains": ["Publish a weekly digest", "Signal Board"]
+    },
+    {
+      "id": "htmx-search",
+      "category": "htmx",
+      "path": "/?q=onboarding",
+      "request_headers": {"HX-Request": "true", "HX-Target": "board"},
+      "contains": ["Make onboarding a three-minute path", "id=\"board\""]
+    },
+    {
+      "id": "oob-filter",
+      "category": "oob",
+      "path": "/?status=shipped",
+      "request_headers": {"HX-Request": "true", "HX-Target": "board"},
+      "contains": ["Ship keyboard navigation", "hx-swap-oob", "id=\"stats\""]
+    },
+    {
+      "id": "htmx-vote",
+      "category": "form",
+      "method": "POST",
+      "path": "/suggestions/seed-export/vote",
+      "request_headers": {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "HX-Request": "true",
+        "HX-Target": "board"
+      },
+      "body": "_csrf_token={{csrf}}",
+      "contains": ["Vote counted", "hx-swap-oob"]
+    },
+    {
+      "id": "duplicate-vote",
+      "category": "form",
+      "method": "POST",
+      "path": "/suggestions/seed-export/vote",
+      "request_headers": {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "HX-Request": "true",
+        "HX-Target": "board"
+      },
+      "body": "_csrf_token={{csrf}}",
+      "contains": ["You already voted", "hx-swap-oob"]
+    },
+    {
+      "id": "asset",
+      "category": "asset",
+      "path": "/styles.css",
+      "headers": {"content-type": "text/css"},
+      "contains": ["--lime:"]
+    },
+    {"id": "health", "category": "health", "path": "/health"},
+    {"id": "readiness", "category": "readiness", "path": "/ready"},
+    {"id": "readiness-head", "category": "readiness", "method": "HEAD", "path": "/ready"}
+  ]
+}

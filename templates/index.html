@@ -1,0 +1,174 @@
+{% extends "chirp/layouts/shell.html" %}
+
+{% block title %}Signal Board · Feedback that moves{% end %}
+
+{% block head %}
+<link rel="stylesheet" href="/styles.css">
+{% end %}
+
+{% block content %}
+{% block page_root %}
+<main class="shell">
+  <header class="hero">
+    <nav class="topbar" aria-label="Product">
+      <a class="brand" href="/" aria-label="Signal Board home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>Signal Board</span>
+      </a>
+      <span class="powered">Python + HTMX · powered by Chirp</span>
+    </nav>
+    <div class="hero-copy">
+      <p class="eyebrow">A roadmap people can shape</p>
+      <h1>Turn feedback into<br><em>forward motion.</em></h1>
+      <p class="lede">Collect the ideas that matter, let people vote, and show what is moving from open to shipped.</p>
+    </div>
+    {% block stats %}
+    <aside id="stats" class="stats" aria-label="Roadmap summary">
+      <div><strong>{{ stats.total }}</strong><span>ideas</span></div>
+      <div><strong>{{ stats.planned }}</strong><span>planned</span></div>
+      <div><strong>{{ stats.in_progress }}</strong><span>building</span></div>
+      <div><strong>{{ stats.shipped }}</strong><span>shipped</span></div>
+    </aside>
+    {% end %}
+  </header>
+
+  <section class="submit-panel" aria-labelledby="submit-title">
+    <div>
+      <p class="section-kicker">Share an idea</p>
+      <h2 id="submit-title">What should we build next?</h2>
+      <p>Describe the outcome you want. Clear ideas collect better votes.</p>
+    </div>
+    <form action="/suggestions" method="post" hx-post="/suggestions" hx-target="#board" hx-swap="outerHTML">
+      {{ csrf_field() }}
+      <label for="title">Suggestion title</label>
+      <input id="title" name="title" minlength="3" maxlength="80" required
+             placeholder="Make onboarding a three-minute path" autocomplete="off">
+      <label for="description">Why would this help?</label>
+      <textarea id="description" name="description" minlength="10" maxlength="600" required
+                placeholder="A short explanation helps everyone understand the outcome."></textarea>
+      <button class="primary" type="submit">Add to the board <span aria-hidden="true">↗</span></button>
+    </form>
+  </section>
+
+  {% block notice %}
+  <p id="notice" class="notice" aria-live="polite">{{ notice }}</p>
+  {% end %}
+
+  {% block board %}
+  <section id="board" class="board" aria-labelledby="board-title">
+    <div class="board-heading">
+      <div>
+        <p class="section-kicker">Public roadmap</p>
+        <h2 id="board-title">Ideas with a pulse</h2>
+      </div>
+      <form class="search" action="/" method="get" hx-get="/" hx-target="#board" hx-swap="outerHTML">
+        <label class="sr-only" for="q">Search suggestions</label>
+        <input id="q" name="q" value="{{ q }}" placeholder="Search the roadmap">
+        {% if selected_status != "all" %}<input type="hidden" name="status" value="{{ selected_status }}">{% end %}
+        <button type="submit">Search</button>
+      </form>
+    </div>
+
+    <nav class="filters" aria-label="Filter roadmap status">
+      <a href="/?status=all&q={{ q }}" hx-get="/?status=all&q={{ q }}" hx-target="#board" hx-swap="outerHTML"
+         {% if selected_status == "all" %}aria-current="page"{% end %}>All <span>{{ stats.total }}</span></a>
+      {% for value in statuses %}
+      <a href="/?status={{ value }}&q={{ q }}" hx-get="/?status={{ value }}&q={{ q }}" hx-target="#board" hx-swap="outerHTML"
+         {% if selected_status == value %}aria-current="page"{% end %}>
+        {% if value == "in_progress" %}Building{% elif value == "open" %}Open{% elif value == "planned" %}Planned{% else %}Shipped{% end %}
+        <span>{{ stats[value] }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+
+    <div class="suggestions">
+      {% for suggestion in page.items %}
+      <article class="suggestion">
+        <div class="vote-column">
+          <form action="/suggestions/{{ suggestion.id }}/vote" method="post"
+                hx-post="/suggestions/{{ suggestion.id }}/vote" hx-target="#board" hx-swap="outerHTML">
+            {{ csrf_field() }}
+            <button class="vote" type="submit" aria-label="Vote for {{ suggestion.title }}">
+              <span aria-hidden="true">↑</span>
+              <strong>{{ suggestion.vote_count }}</strong>
+              <small>votes</small>
+            </button>
+          </form>
+        </div>
+        <div class="suggestion-copy">
+          <div class="suggestion-meta">
+            <span class="status status-{{ suggestion.status }}">
+              {% if suggestion.status == "in_progress" %}Building{% elif suggestion.status == "open" %}Open{% elif suggestion.status == "planned" %}Planned{% else %}Shipped{% end %}
+            </span>
+            <span>Community idea</span>
+          </div>
+          <h3>{{ suggestion.title }}</h3>
+          <p>{{ suggestion.description }}</p>
+          {% if admin %}
+          <div class="owner-actions">
+            <form action="/admin/suggestions/{{ suggestion.id }}/status" method="post"
+                  hx-post="/admin/suggestions/{{ suggestion.id }}/status" hx-target="#board" hx-swap="outerHTML">
+              {{ csrf_field() }}
+              <label class="sr-only" for="status-{{ suggestion.id }}">Roadmap status</label>
+              <select id="status-{{ suggestion.id }}" name="status">
+                {% for value in statuses %}
+                <option value="{{ value }}" {% if suggestion.status == value %}selected{% end %}>
+                  {% if value == "in_progress" %}Building{% elif value == "open" %}Open{% elif value == "planned" %}Planned{% else %}Shipped{% end %}
+                </option>
+                {% endfor %}
+              </select>
+              <button type="submit">Update</button>
+            </form>
+            <form action="/admin/suggestions/{{ suggestion.id }}/delete" method="post"
+                  hx-post="/admin/suggestions/{{ suggestion.id }}/delete" hx-target="#board" hx-swap="outerHTML">
+              {{ csrf_field() }}
+              <button class="danger" type="submit">Delete</button>
+            </form>
+          </div>
+          {% end %}
+        </div>
+      </article>
+      {% else %}
+      <div class="empty">
+        <span aria-hidden="true">◎</span>
+        <h3>No ideas found</h3>
+        <p>Try another search, switch the status filter, or add the first one.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if page.total_pages > 1 %}
+    <nav class="pagination" aria-label="Roadmap pages">
+      {% if page.has_prev %}<a href="/?page={{ page.prev_page }}&status={{ selected_status }}&q={{ q }}" hx-get="/?page={{ page.prev_page }}&status={{ selected_status }}&q={{ q }}" hx-target="#board" hx-swap="outerHTML">← Previous</a>{% end %}
+      <span>Page {{ page.page }} of {{ page.total_pages }}</span>
+      {% if page.has_next %}<a href="/?page={{ page.next_page }}&status={{ selected_status }}&q={{ q }}" hx-get="/?page={{ page.next_page }}&status={{ selected_status }}&q={{ q }}" hx-target="#board" hx-swap="outerHTML">Next →</a>{% end %}
+    </nav>
+    {% end %}
+
+    <aside class="owner-panel">
+      {% if admin %}
+      <div><span class="owner-dot" aria-hidden="true"></span><strong>Owner controls are unlocked</strong></div>
+      <form action="/admin/logout" method="post" hx-post="/admin/logout" hx-target="#board" hx-swap="outerHTML">
+        {{ csrf_field() }}
+        <button type="submit">Lock controls</button>
+      </form>
+      {% else %}
+      <div><strong>Board owner?</strong><span>Use the generated Railway token to moderate.</span></div>
+      <form action="/admin/login" method="post" hx-post="/admin/login" hx-target="#board" hx-swap="outerHTML">
+        {{ csrf_field() }}
+        <label class="sr-only" for="token">Owner token</label>
+        <input id="token" name="token" type="password" required placeholder="Owner token" autocomplete="current-password">
+        <button type="submit">Unlock</button>
+      </form>
+      {% end %}
+    </aside>
+  </section>
+  {% end %}
+
+  <footer>
+    <span>PostgreSQL persistence · no Redis required</span>
+    <a href="https://chirp.b-stack.dev">Built with Chirp <span aria-hidden="true">↗</span></a>
+  </footer>
+</main>
+{% end %}
+{% end %}

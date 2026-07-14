@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+feedback-board.db
+feedback-board.db-shm
+feedback-board.db-wal
+local-conformance.json
+live-conformance.json
