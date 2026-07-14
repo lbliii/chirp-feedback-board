@@ -20,4 +20,4 @@ jobs:
       - run: uv run pytest -q
 
   conformance:
-    uses: lbliii/chirp-railway-catalog/.github/workflows/template-conformance.yml@main
+    uses: lbliii/chirp-railway-catalog/.github/workflows/template-conformance.yml@v0.2.1
