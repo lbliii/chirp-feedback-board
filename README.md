@@ -35,8 +35,8 @@ app is reachable by anyone else.
 
 ## Deploy on Railway
 
-Use the Railway template once it is published. Its topology is intentionally
-small:
+[Deploy the Railway template](https://railway.com/deploy/chirp-feedback-board).
+Its topology is intentionally small:
 
 - one Chirp web service pinned to one worker;
 - one Railway-managed PostgreSQL service;
@@ -49,6 +49,9 @@ signed cookie sessions do not need a server-side session store. Add shared
 runtime infrastructure only if you later scale to multiple web replicas and
 introduce shared rate limits/cache, cross-worker realtime fan-out, or a
 separate job queue.
+
+See the [live demo](https://web-production-4a10d4.up.railway.app/) or read the
+[Chirp documentation](https://lbliii.github.io/chirp/).
 
 ## Verify
 
