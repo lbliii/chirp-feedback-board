@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 - 2026-07-14
+
+- Prove actionable startup failure when PostgreSQL is unavailable.
+- Prove broken migrations and schema mismatches fail loudly.
+
 ## 0.1.3 - 2026-07-14
 
 - Publish the zero-input Railway template and live demo.

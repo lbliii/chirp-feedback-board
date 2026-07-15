@@ -5,8 +5,10 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 import pytest
+from chirp.data import DataError, MigrationError, QueryError
 from chirp.testing import TestClient
 
+import app as feedback_app
 from app import create_app
 
 pytestmark = pytest.mark.issue(741)
@@ -192,6 +194,49 @@ async def test_restart_preserves_submitted_data(tmp_path: Path) -> None:
         page = await client.get("/")
 
     assert "Keep this after restart" in page.text
+
+
+async def test_database_unavailable_at_startup_is_actionable() -> None:
+    app = create_app(
+        "postgresql://postgres:postgres@127.0.0.1:1/railway",
+        admin_token="test-owner-token",
+        secret_key="test-signing-key-with-enough-entropy",
+    )
+
+    with pytest.raises(DataError, match=r"could not connect to 127\.0\.0\.1:1"):
+        async with TestClient(app):
+            pass
+
+
+async def test_migration_failure_names_the_broken_migration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    migrations = tmp_path / "migrations"
+    migrations.mkdir()
+    (migrations / "001_broken.sql").write_text("CREATE TABL broken (", encoding="utf-8")
+    monkeypatch.setattr(feedback_app, "MIGRATIONS", migrations)
+    app = _application(tmp_path / "broken-migration.db")
+
+    with pytest.raises(MigrationError, match="Migration 001_broken failed"):
+        async with TestClient(app):
+            pass
+
+
+async def test_schema_mismatch_fails_loud_on_the_missing_column(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    migrations = tmp_path / "migrations"
+    migrations.mkdir()
+    (migrations / "001_wrong_schema.sql").write_text(
+        "CREATE TABLE suggestions (id TEXT PRIMARY KEY);",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(feedback_app, "MIGRATIONS", migrations)
+    app = _application(tmp_path / "wrong-schema.db")
+
+    with pytest.raises(QueryError, match="no column named title"):
+        async with TestClient(app):
+            pass
 
 
 def test_app_contracts_pass(tmp_path: Path) -> None:
